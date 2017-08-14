@@ -177,13 +177,18 @@ class Tag:
 
                 reader.raise_error("expected attribute id, not '{curr}'")
 
-            has_capture = (source.curr == ":")
+            has_capture = (source.curr == ':')
             attr_capture = None
             if has_capture:
                 source.next()
                 reader.match('{', context="and not '{curr}' to capture attribute")
                 attr_capture = reader.next_identifier()
+                
+                # no capture name found
                 if not attr_capture:
+                    # special case if no name provided
+                    if source.curr == '}':
+                        reader.raise_error("capture must have a name")
                     reader.raise_error("expected capture name, not '{curr}'")
 
                 reader.match('}')
