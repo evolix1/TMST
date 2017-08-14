@@ -6,8 +6,11 @@ import tmst.syntax
 
 
 class Cases:
-    all = ("no_template one_tag tag_name_are_followed_by_space"
-           " attribute_idly").split()
+    all = ("empty_template one_tag tag_name_is_followed_by_space"
+           " attribute_is_followed_by_space blank_template"
+           " attribute_idly attribute_can_be_both_captured_and_have_value"
+           " attribute_can_be_captured attribute_can_have_value"
+           " attribute_can_have_value_with_simple_quote_also").split()
 
     def __init__(self):
         self.casedir = pathlib.Path(__file__).resolve().parent / "cases"

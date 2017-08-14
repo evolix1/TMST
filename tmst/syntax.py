@@ -161,7 +161,7 @@ class Tag:
             attr_value = None
             if has_value:
                 source.next()
-                attr_value = reader.next_string()
+                attr_value = reader.next_string("for attribute value")
 
             reader.match_then_skip_ws("after attribute")
 
