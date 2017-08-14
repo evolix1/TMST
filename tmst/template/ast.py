@@ -15,7 +15,7 @@ class Identifier:
         return bool(self.name)
 
 
-class PathOfIdentifier:
+class IdentifierPath:
     def __init__(self, parts: (Identifier, )=None, absolute=True):
         self.parts = [] if parts is None else list(parts)
         self.is_absolute = absolute
@@ -46,7 +46,7 @@ class PathOfIdentifier:
 class Attribute:
     def __init__(self,
                  name: Identifier,
-                 capture: PathOfIdentifier=None,
+                 capture: IdentifierPath=None,
                  value: str=None):
         self.name = name
         self.capture = capture

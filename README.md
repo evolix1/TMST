@@ -21,7 +21,7 @@ Ok fine, but this is no better than XPath.
 
 <br/>
 
-This second example groups extraction within a identified scope.
+This second example groups extraction within an identified scope.
 
 One main thing to know, __parent/child relationship in the template is not direct__.
 Between `card` and `card-title` in the source DOM to parse, there can be 0 to &infin; intermediate level.
@@ -47,7 +47,7 @@ Same thing append with `img`, it can be or not sibling with `span`.
     <a class="link" href:{item.link}>
         {item.description}
     </a>
-<#/>
+</#>
 ```
 
 is equivalent as
@@ -66,22 +66,34 @@ is equivalent as
 </>
 ```
 
-* Autoclosing tag of `#`.
+* Deduction of closing tag name for `#`.
 * Relative capture name. `item.pic` become `.pic`.
 
 ## Syntax
 
-#### Capture
+### Capture
 
-Attribute are captured like this `attribute:{name_for_capture}` _(no space/quote possible at any position here)_.
+Attribute are captured like this `attribute:{capture_identifier}` _(no space/quote possible at any position here)_.
 
-Text are captured with `{name_for_capture}`. This expression is between an opening and closing tag.
+Text are captured with `{capture_identifier}`. This expression is between an opening (like `<a>`) and a closing tag (like `</a>`).
 
-<br/>
 
-A capture name is understood as a namespace path.
+### Identifier
 
-Capture names `item.description` ,`item.preview.link`, `item.preview.title` are decomposed as:
+An identifier is structured like:
+
+* Begin with a letter (upper or lower case),
+* Followed by none or many of any letters, `-` _(hypen)_ or `_` _(underscore)_.
+
+#### Special case for capture identifier
+
+A capture identifier is made from one to many single identifier, separated with `.`_(dot)_.
+
+In case the capture identifier is relative, it starts with a `.` _(dot)_.
+
+Example:
+
+Capture  `item.description`, `item.preview.link` and `.title` (with parent `item.preview`) are decomposed as:
 
 + `item` is a top-level object,
     + `preview` is a list of top-level object,
@@ -90,13 +102,13 @@ Capture names `item.description` ,`item.preview.link`, `item.preview.title` are 
     + `description` is a list of text,
 
 
-#### Tag matching
+### Tag matching
 
 Tag name are matched as given. A written tag `span` must match an existing source DOM element named `span`.
 
 In case any tag is possible, use `#`.
 
-#### Attribute matching
+### Attribute matching
 
 Attribute are matched with the equal operator `==`.
 

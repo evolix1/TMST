@@ -115,8 +115,8 @@ class Reader:
         name = start + "".join(itertools.takewhile(valid, self.source))
         return ast.Identifier(name)
 
-    def next_path_of_identifier(self):
-        ident = ast.PathOfIdentifier()
+    def next_identifier_path(self):
+        ident = ast.IdentifierPath()
 
         if self.source.curr == ".":
             ident.is_relative = True
@@ -203,40 +203,40 @@ class Parser:
                     # to the captured name or the attribute value
                     if self.source.curr == ':':
                         reader.raise_error("unexpected whitespace between"
-                                           " attribute and capture")
+                                           " attribute identifier"
+                                           " and capture identifier")
                     elif self.source.curr == '=' and not last_attr["capture"]:
                         reader.raise_error("unexpected whitespace between"
-                                           " attribute and its value")
+                                           " attribute identifier and its value")
                     elif self.source.curr == '=':
                         reader.raise_error("unexpected whitespace between"
-                                           " capture and value")
+                                           " capture identifier"
+                                           " and attribute value")
 
-                reader.raise_error("expected attribute id, not '{curr}'")
+                reader.raise_error("expected attribute identifier, not '{curr}'")
 
             has_capture = (self.source.curr == ':')
             attr_capture = None
             if has_capture:
                 self.source.next()
                 reader.match(
-                    '{', context="and not '{curr}' to capture attribute")
-                attr_capture = reader.next_path_of_identifier()
+                    '{', context="and not '{curr}' to capture the attribute")
+                attr_capture = reader.next_identifier_path()
 
                 # no capture name found
                 # (same as empty which is the default state)
-                if attr_capture == ast.PathOfIdentifier():
+                if attr_capture == ast.IdentifierPath():
                     # special case if no name provided
                     if self.source.curr == '}':
-                        reader.raise_error("capture must have a name")
-                    reader.raise_error("expected capture name, not '{curr}'")
+                        reader.raise_error("capture must have an identifier")
+                    reader.raise_error("expected capture identifier, not '{curr}'")
                 elif not attr_capture.is_valid():
-                    # TODO unify naming for capture
-                    # {definition, declaration, path, name}
                     reader.raise_error(
-                        "invalid capture name declaration"
+                        "invalid capture identifier"
                         " with \"{}\"".format(str(attr_capture)))
 
                 reader.match(
-                    '}', context="and not '{curr}' after capture definition")
+                    '}', context="and not '{curr}' after capture identifier")
 
             has_value = (self.source.curr == '=')
             attr_value = None
