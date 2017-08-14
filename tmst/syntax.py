@@ -183,6 +183,9 @@ class Tag:
                 source.next()
                 reader.match('{', context="and not '{curr}' to capture attribute")
                 attr_capture = reader.next_identifier()
+                if not attr_capture:
+                    reader.raise_error("expected capture name, not '{curr}'")
+
                 reader.match('}')
 
             has_value = (source.curr == '=')
