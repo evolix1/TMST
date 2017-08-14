@@ -3,6 +3,8 @@ import itertools
 
 import logging
 
+from . import ast
+
 
 class Source:
     def __init__(self, stream):
@@ -104,18 +106,20 @@ class Reader:
 
     def next_identifier(self):
         if not self.source.curr.isalpha():
-            return ""
+            return ast.Identifier()
 
         def valid(t: str):
             return t.isalpha() or t in "-_"
 
         start = self.source.curr
-        return start + "".join(itertools.takewhile(valid, self.source))
+        name = start + "".join(itertools.takewhile(valid, self.source))
+        return ast.Identifier(name)
 
     def next_path_of_identifier(self):
-        parts = []
+        ident = ast.PathOfIdentifier()
+
         if self.source.curr == ".":
-            parts.append("")
+            ident.is_relative = True
             self.source.next()
 
         has_next = True
@@ -123,12 +127,22 @@ class Reader:
             has_next = False
             name = self.next_identifier()
             if name:
-                parts.append(name)
+                ident.parts.append(name)
+
                 if self.source.curr == ".":
                     self.source.next()
                     has_next = True
 
-        return parts
+            elif ident.parts:
+                # special case if this ends with dot
+                # like in """root.name."""
+                # it appends an invalid identifier
+                # so the path of identifier is itself invalid
+                ident.parts.append(ast.Identifier())
+                assert ident.is_valid() is False, (
+                    "action failed to make it invalid")
+
+        return ident
 
     def next_string(self, context: str):
         portal = self.source.curr
@@ -152,6 +166,7 @@ class Reader:
 
 
 class Parser:
+    # TODO make it member function
     @staticmethod
     def open_tag(source: Source):
         reader = Reader(source)
@@ -205,12 +220,19 @@ class Parser:
                     '{', context="and not '{curr}' to capture attribute")
                 attr_capture = reader.next_path_of_identifier()
 
-                # no capture name found
-                if not attr_capture:
+                # no capture name found 
+                # (same as empty which is the default state)
+                if attr_capture == ast.PathOfIdentifier():
                     # special case if no name provided
                     if source.curr == '}':
                         reader.raise_error("capture must have a name")
                     reader.raise_error("expected capture name, not '{curr}'")
+                elif not attr_capture.is_valid():
+                    # TODO unify naming for capture
+                    # {definition, declaration, path, name}
+                    reader.raise_error(
+                        "invalid capture name declaration"
+                        " with \"{}\"".format(str(attr_capture)))
 
                 reader.match(
                     '}', context="and not '{curr}' after capture definition")
