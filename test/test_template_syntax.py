@@ -8,6 +8,24 @@ from tmst.template import syntax
 class Cases:
     def __init__(self):
         self.casedir = pathlib.Path(__file__).resolve().parent / "cases"
+        self.test_cases = set()
+        self.avoided = []
+
+    def print_ignored_content(self):
+        if not self.avoided:
+            return
+
+        msg = (
+            "THERE IS ONE FILE IGNORED WITHOUT REASON.",
+            "THERE ARE {} FILES IGNORED WITHOUT REASON."
+            .format(len(self.avoided)))[
+                max(0, min(1, len(self.avoided) - 1))
+            ]
+
+        print()
+        print(" ***", msg, "***")
+        print()
+        print("File(s):", ", ".join(self.avoided))
 
     def discover_local_tests(self):
         """Register all available test cases from the 'cases' folder."""
@@ -18,12 +36,11 @@ class Cases:
         def is_test(path):
             return path.suffix in (".success", ".error", ".exception")
 
-        def knife(root):
-            return filter(lambda x: x is not None, (clean(x)
-                                                    for x in root.iterdir()
-                                                    if is_test(x)))
-
-        self.test_cases = set(knife(self.casedir))
+        for entry in self.casedir.iterdir():
+            if is_test(entry):
+                self.test_cases.add(clean(entry))
+            else:
+                self.avoided.append(entry.name)
 
     def feed(self, test_class: unittest.TestCase):
         """Inject test case method into the testing class."""
@@ -109,4 +126,7 @@ cases.discover_local_tests()
 cases.feed(TestTemplate)
 
 if __name__ == "__main__":
+    import atexit
+    atexit.register(cases.print_ignored_content)
+
     unittest.main()
