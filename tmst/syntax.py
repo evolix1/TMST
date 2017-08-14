@@ -110,6 +110,24 @@ class Reader:
         start = self.source.curr
         return start + "".join(itertools.takewhile(valid, self.source))
 
+    def next_path_of_identifier(self):
+        parts = []
+        if self.source.curr == ".":
+            parts.append("")
+            self.source.next()
+
+        has_next = True
+        while has_next:
+            has_next = False
+            name = self.next_identifier()
+            if name:
+                parts.append(name)
+                if self.source.curr == ".":
+                    self.source.next()
+                    has_next = True
+
+        return parts
+
     def next_string(self, context: str):
         portal = self.source.curr
         if portal not in ("'", '"'):
@@ -181,9 +199,10 @@ class Tag:
             attr_capture = None
             if has_capture:
                 source.next()
-                reader.match('{', context="and not '{curr}' to capture attribute")
-                attr_capture = reader.next_identifier()
-                
+                reader.match(
+                    '{', context="and not '{curr}' to capture attribute")
+                attr_capture = reader.next_path_of_identifier()
+
                 # no capture name found
                 if not attr_capture:
                     # special case if no name provided
@@ -191,7 +210,8 @@ class Tag:
                         reader.raise_error("capture must have a name")
                     reader.raise_error("expected capture name, not '{curr}'")
 
-                reader.match('}')
+                reader.match(
+                    '}', context="and not '{curr}' after capture definition")
 
             has_value = (source.curr == '=')
             attr_value = None
