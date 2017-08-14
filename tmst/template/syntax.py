@@ -166,10 +166,11 @@ class Reader:
 
 
 class Parser:
-    # TODO make it member function
-    @staticmethod
-    def open_tag(source: Source):
-        reader = Reader(source)
+    def __init__(self, source: Source):
+        self.source = source
+
+    def open_tag(self):
+        reader = Reader(self.source)
 
         # move at the begining af the tag declaratation
         reader.skip_ws()
@@ -177,8 +178,8 @@ class Parser:
 
         # pass the tag name
         name = None
-        if source.curr == "#":
-            source.next()
+        if self.source.curr == "#":
+            self.source.next()
         else:
             name = reader.next_identifier()
             if not name:
@@ -187,7 +188,7 @@ class Parser:
 
         # pass attributes
         attributes = []
-        while source.curr not in (">", "/"):
+        while self.source.curr not in (">", "/"):
             attr_name = reader.next_identifier()
 
             # no identifier found
@@ -200,31 +201,31 @@ class Parser:
                     # where the space is misleading
                     # so we did had an identifier but not linked
                     # to the captured name or the attribute value
-                    if source.curr == ':':
+                    if self.source.curr == ':':
                         reader.raise_error("unexpected whitespace between"
                                            " attribute and capture")
-                    elif source.curr == '=' and not last_attr["capture"]:
+                    elif self.source.curr == '=' and not last_attr["capture"]:
                         reader.raise_error("unexpected whitespace between"
                                            " attribute and its value")
-                    elif source.curr == '=':
+                    elif self.source.curr == '=':
                         reader.raise_error("unexpected whitespace between"
                                            " capture and value")
 
                 reader.raise_error("expected attribute id, not '{curr}'")
 
-            has_capture = (source.curr == ':')
+            has_capture = (self.source.curr == ':')
             attr_capture = None
             if has_capture:
-                source.next()
+                self.source.next()
                 reader.match(
                     '{', context="and not '{curr}' to capture attribute")
                 attr_capture = reader.next_path_of_identifier()
 
-                # no capture name found 
+                # no capture name found
                 # (same as empty which is the default state)
                 if attr_capture == ast.PathOfIdentifier():
                     # special case if no name provided
-                    if source.curr == '}':
+                    if self.source.curr == '}':
                         reader.raise_error("capture must have a name")
                     reader.raise_error("expected capture name, not '{curr}'")
                 elif not attr_capture.is_valid():
@@ -237,10 +238,10 @@ class Parser:
                 reader.match(
                     '}', context="and not '{curr}' after capture definition")
 
-            has_value = (source.curr == '=')
+            has_value = (self.source.curr == '=')
             attr_value = None
             if has_value:
-                source.next()
+                self.source.next()
                 attr_value = reader.next_string("for attribute value")
 
             reader.match_then_skip_ws("after attribute")
@@ -254,9 +255,9 @@ class Parser:
             reader.skip_ws()
 
         # pass tag end
-        is_auto_closing = (source.curr == "/")
+        is_auto_closing = (self.source.curr == "/")
         if is_auto_closing:
-            source.next()
+            self.source.next()
             reader.match(">", context="after '/'")
 
         assert is_auto_closing, "only autoclosing tag supported"
@@ -273,5 +274,5 @@ def compile(input: str):
     Reader(source).skip_ws()
 
     if not source.done:
-        Parser.open_tag(source)
+        Parser(source).open_tag()
         assert source.done, "internal error, source not read entirely"
