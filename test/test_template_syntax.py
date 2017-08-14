@@ -6,7 +6,8 @@ import tmst.syntax
 
 
 class Cases:
-    all = ("no_template", "one_tag", "tag_name_are_followed_by_space")
+    all = ("no_template one_tag tag_name_are_followed_by_space"
+           " attribute_idly").split()
 
     def __init__(self):
         self.casedir = pathlib.Path(__file__).resolve().parent / "cases"
@@ -27,7 +28,10 @@ class Cases:
 
         error = self.casedir / "{}.error".format(rawname)
         exception = self.casedir / "{}.exception".format(rawname)
-        return self.hook_error(error, exception)
+        if error.exists() and exception.exists():
+            return self.hook_error(error, exception)
+
+        raise RuntimeError("no such test {}".format(rawname))
 
     def hook_success(self, path):
         with open(path, "r") as case:

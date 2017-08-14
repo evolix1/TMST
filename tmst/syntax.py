@@ -80,10 +80,12 @@ class Reader:
         skip = lambda x: x is not None and x.isspace()
         tuple(itertools.takewhile(skip, self.source))
 
-    def match_ws(self, context: str):
+    def match_then_skip_ws(self, context: str):
         if not self.source.curr.isspace():
             self.raise_error("expected whitespace " + context)
         self.source.next()
+
+        self.skip_ws()
 
     def match(self, sequence, context: str=""):
         assert len(sequence) > 0, "cannot match against nothing"
@@ -140,9 +142,7 @@ class Tag:
             source.next()
         else:
             name = reader.next_identifier()
-        reader.match_ws("after tag name")
-        reader.skip_ws()
-        # TODO update 'match_ws' to 'match_and_skip_ws'
+        reader.match_then_skip_ws("after tag name")
 
         # pass attributes
         attributes = []
@@ -163,7 +163,7 @@ class Tag:
                 source.next()
                 attr_value = reader.next_string()
 
-            reader.match_ws("after attribute")
+            reader.match_then_skip_ws("after attribute")
 
             attributes.append({
                 "name": attr_name,
@@ -177,7 +177,7 @@ class Tag:
         is_auto_closing = (source.curr == "/")
         if is_auto_closing:
             source.next()
-        reader.match(">")
+            reader.match(">", context='after "/"')
 
         return {
             "name": name,
