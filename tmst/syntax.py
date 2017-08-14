@@ -165,13 +165,15 @@ class Tag:
                     # where the space is misleading
                     # so we did had an identifier but not linked
                     # to the captured name or the attribute value
-                    if not last_attr["capture"] and not last_attr["value"]:
-                        if source.curr == ':':
-                            reader.raise_error("unexpected whitespace between"
-                                               " attribute and capture")
-                        elif source.curr == '=':
-                            reader.raise_error("unexpected whitespace between"
-                                               " attribute and its value")
+                    if source.curr == ':':
+                        reader.raise_error("unexpected whitespace between"
+                                           " attribute and capture")
+                    elif source.curr == '=' and not last_attr["capture"]:
+                        reader.raise_error("unexpected whitespace between"
+                                           " attribute and its value")
+                    elif source.curr == '=':
+                        reader.raise_error("unexpected whitespace between"
+                                           " capture and value")
 
                 reader.raise_error("expected attribute id, not '{curr}'")
 

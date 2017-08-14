@@ -21,6 +21,7 @@ class Cases:
            " attribute_capture_cannot_have_space_before_name"
            " attribute_capture_must_follow_attribute_id"
            " attribute_value_must_follow_attribute_id"
+           " attribute_value_when_capture_must_follow_capture"
            " attribute_id_can_only_start_with_letter_not_hypen"
            " attribute_id_can_only_start_with_letter_not_underscore"
            " attribute_id_can_only_start_with_letter_not_number"
