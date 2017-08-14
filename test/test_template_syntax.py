@@ -2,7 +2,7 @@ import pathlib
 import unittest
 
 import fix_import
-import tmst.syntax
+from tmst.template import syntax
 
 
 class Cases:
@@ -71,7 +71,7 @@ class ValidTest:
 
     def check_with(self, testcase):
         try:
-            tmst.syntax.compile(self.template)
+            syntax.compile(self.template)
         except Exception as exc:
             testcase.fail(str(exc))
 
@@ -89,10 +89,10 @@ class ErroneousTest:
 
     def check_with(self, testcase):
         try:
-            tmst.syntax.compile(self.template)
+            syntax.compile(self.template)
             testcase.fail("expected to raise at {}: {}"
                           .format(self.pos, self.error_msg))
-        except tmst.syntax.PatternSyntaxError as exc:
+        except syntax.PatternSyntaxError as exc:
             testcase.assertEqual(exc.pos, self.pos)
             testcase.assertEqual(str(exc), self.error_msg)
 

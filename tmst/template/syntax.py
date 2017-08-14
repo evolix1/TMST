@@ -3,8 +3,6 @@ import itertools
 
 import logging
 
-from tmst import ast
-
 
 class Source:
     def __init__(self, stream):
@@ -17,6 +15,10 @@ class Source:
     @property
     def done(self):
         return self.stream is None
+
+    @property
+    def curr_str(self):
+        return "" if self.curr is None else self.curr
 
     def __iter__(self):
         return self
@@ -69,8 +71,8 @@ class Reader:
 
     def raise_error(self, msg):
         # cannot call 'str.format' because it lacks support of bracket escaping
-        # like in this """expected '{' with {name}"""
-        msg = msg.replace("{curr}", self.source.curr)
+        # like in this example: """expected '{' with {name}"""
+        msg = msg.replace("{curr}", self.source.curr_str)
         raise PatternSyntaxError(msg, pos=self.source.strpos)
 
     def skip_ws(self):
@@ -149,9 +151,9 @@ class Reader:
         return value
 
 
-class Tag:
+class Parser:
     @staticmethod
-    def parse_begin_tag(source: Source):
+    def open_tag(source: Source):
         reader = Reader(source)
 
         # move at the begining af the tag declaratation
@@ -235,48 +237,19 @@ class Tag:
             source.next()
             reader.match(">", context="after '/'")
 
-        return {
-            "name": name,
-            "attrs": attributes,
-            "auto_close": is_auto_closing
-        }
-
-    @staticmethod
-    def build(tag_info: dict) -> ast.Visitor:
-        v = ast.Visitor()
-
-        if tag_info["name"] is not None:
-            cond = ast.filter_tag_name(tag_info["name"])
-            v.identifiers.append(cond)
-
-        for attr_def in tag_info["attrs"]:
-            if attr_def["capture"] is not None:
-                capt = ast.capture_tag_attr(attr_def["name"],
-                                            attr_def["capture"])
-                v.captures.append(capt)
-
-            if attr_def["value"] is not None:
-                cond = ast.filter_tag_attr(attr_def["name"], attr_def["value"])
-                v.identifiers.append(cond)
-
-        return v
-
-    @staticmethod
-    def parse_build(source: Source):
-        Reader(source).skip_ws()
-        while not source.done:
-            begin_tag = Tag.parse_begin_tag(source)
-            assert begin_tag.get("auto_close", False) is True
-            yield Tag.build(begin_tag)
-
-            if not source.done:
-                Reader(source).skip_ws()
+        assert is_auto_closing, "only autoclosing tag supported"
+        reader.skip_ws()
 
 
 def compile(input: str):
     logging.root.info("compile template")
+
     source = Source(input)
+
+    # initiate reading
     source.next()
-    root = ast.Visitor()
-    root.children = tuple(Tag.parse_build(source))
-    return root
+    Reader(source).skip_ws()
+
+    if not source.done:
+        Parser.open_tag(source)
+        assert source.done, "internal error, source not read entirely"
