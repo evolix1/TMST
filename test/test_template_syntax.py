@@ -7,7 +7,8 @@ from tmst.template import syntax
 
 class Cases:
     def __init__(self):
-        self.casedir = pathlib.Path(__file__).resolve().parent / "cases"
+        self.casedir = pathlib.Path(
+            __file__).resolve().parent / "template_cases"
         self.test_cases = set()
         self.avoided = []
 
@@ -18,9 +19,7 @@ class Cases:
         msg = (
             "THERE IS ONE FILE IGNORED WITHOUT REASON.",
             "THERE ARE {} FILES IGNORED WITHOUT REASON."
-            .format(len(self.avoided)))[
-                max(0, min(1, len(self.avoided) - 1))
-            ]
+            .format(len(self.avoided)))[max(0, min(1, len(self.avoided) - 1))]
 
         print()
         print(" ***", msg, "***")
@@ -28,7 +27,7 @@ class Cases:
         print("File(s):", ", ".join(self.avoided))
 
     def discover_local_tests(self):
-        """Register all available test cases from the 'cases' folder."""
+        """Register all available test cases from the 'template_cases' folder."""
 
         def clean(path):
             return path.stem
