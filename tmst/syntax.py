@@ -30,33 +30,39 @@ class Source:
                 if self.curr == '\n':
                     self.line += 1
                     self.column = 0
+
             logging.root.debug(
                 "Read at {}: {} ({})".format(
-                    self.context(), 
+                    self.strpos, 
                     self.curr, 
                     ("was frozen" if self.frozen_curr else "next")))
+
             self.frozen_curr = False
             return self.curr
+
         except StopIteration:
             self.curr = None
             self.stream = None
-            raise GeneratorExit()
+            raise StopIteration()
 
     def next(self) -> str:
         try:
             return self.__next__()
-        except GeneratorExit:
+        except StopIteration:
             pass
 
     def freeze_once(self):
         self.frozen_curr = True
 
-    def context(self) -> str:
+    @property
+    def strpos(self) -> str:
         return "{row}:{col}".format(row=self.line, col=self.column)
 
 
 class PatternSyntaxError(RuntimeError):
-    pass
+    def __init__(self, *msg, pos=None, **kw):
+        super(PatternSyntaxError, self).__init__(*msg, **kw)
+        self.pos = pos
 
 
 class Reader:
@@ -64,26 +70,30 @@ class Reader:
         self.source = source
 
     def raise_error(self, msg):
-        errmsg = "error at {context}: {msg}".format(
-            context=self.source.context(), msg=msg)
-        raise PatternSyntaxError(errmsg)
+        raise PatternSyntaxError(msg, pos=self.source.strpos)
 
     def skip_ws(self):
-        self.source.freeze_once()
-        tuple(itertools.takewhile(str.isspace, self.source))
+        if self.source.done:
+            return
 
-    def match_ws(self):
+        self.source.freeze_once()
+        skip = lambda x: x is not None and x.isspace()
+        tuple(itertools.takewhile(skip, self.source))
+
+    def match_ws(self, context: str):
         if not self.source.curr.isspace():
-            self.raise_error("expected whitespace")
+            self.raise_error("expected whitespace " + context)
         self.source.next()
 
-    def match(self, sequence):
+    def match(self, sequence, context: str=""):
         assert len(sequence) > 0, "cannot match against nothing"
 
         self.source.freeze_once()
         for (expected, curr) in zip(sequence, self.source):
             if not curr == expected:
-                self.raise_error("expected '{}'".format(expected))
+                errmsg = "expected '{}'".format(expected)
+                errmsg += ((" " + context) if context else "")
+                self.raise_error(errmsg)
 
         self.source.next()
 
@@ -94,10 +104,10 @@ class Reader:
         self.source.freeze_once()
         return "".join(itertools.takewhile(valid, self.source))
 
-    def next_string(self):
+    def next_string(self, context: str):
         portal = self.source.curr
         if portal not in ("'", '"'):
-            self.raise_error("""expected ''' or '"'""")
+            self.raise_error("""expected ''' or '"' """ + context)
 
         escaping = False
         value = ""
@@ -130,8 +140,9 @@ class Tag:
             source.next()
         else:
             name = reader.next_identifier()
-        reader.match_ws()
+        reader.match_ws("after tag name")
         reader.skip_ws()
+        # TODO update 'match_ws' to 'match_and_skip_ws'
 
         # pass attributes
         attributes = []
@@ -152,7 +163,7 @@ class Tag:
                 source.next()
                 attr_value = reader.next_string()
 
-            reader.match_ws()
+            reader.match_ws("after attribute")
 
             attributes.append({
                 "name": attr_name,
