@@ -32,10 +32,8 @@ class Source:
                     self.column = 0
 
             logging.root.debug(
-                "Read at {}: {} ({})".format(
-                    self.strpos, 
-                    self.curr, 
-                    ("was frozen" if self.frozen_curr else "next")))
+                "Read at {}: {} ({})".format(self.strpos, self.curr, (
+                    "was frozen" if self.frozen_curr else "next")))
 
             self.frozen_curr = False
             return self.curr
@@ -70,6 +68,9 @@ class Reader:
         self.source = source
 
     def raise_error(self, msg):
+        # cannot call 'str.format' because it lacks support of bracket escaping
+        # like in this """expected '{' with {name}"""
+        msg = msg.replace("{curr}", self.source.curr)
         raise PatternSyntaxError(msg, pos=self.source.strpos)
 
     def skip_ws(self):
@@ -100,11 +101,14 @@ class Reader:
         self.source.next()
 
     def next_identifier(self):
+        if not self.source.curr.isalpha():
+            return ""
+
         def valid(t: str):
             return t.isalpha() or t in "-_"
 
-        self.source.freeze_once()
-        return "".join(itertools.takewhile(valid, self.source))
+        start = self.source.curr
+        return start + "".join(itertools.takewhile(valid, self.source))
 
     def next_string(self, context: str):
         portal = self.source.curr
@@ -149,15 +153,35 @@ class Tag:
         while source.curr not in (">", "/"):
             attr_name = reader.next_identifier()
 
+            # no identifier found
+            if not attr_name:
+                # special case if this is after an attribute declaration
+                if attributes:
+                    last_attr = attributes[-1]
+                    # this might an error like this "id :{name}"
+                    # or like this "id ='...'"
+                    # where the space is misleading
+                    # so we did had an identifier but not linked
+                    # to the captured name or the attribute value
+                    if not last_attr["capture"] and not last_attr["value"]:
+                        if source.curr == ':':
+                            reader.raise_error("unexpected whitespace between"
+                                               " attribute and capture")
+                        elif source.curr == '=':
+                            reader.raise_error("unexpected whitespace between"
+                                               " attribute and its value")
+
+                reader.raise_error("expected attribute id, not '{curr}'")
+
             has_capture = (source.curr == ":")
             attr_capture = None
             if has_capture:
                 source.next()
-                reader.match("{")
+                reader.match('{', context="and not '{curr}' to capture attribute")
                 attr_capture = reader.next_identifier()
-                reader.match("}")
+                reader.match('}')
 
-            has_value = (source.curr == "=")
+            has_value = (source.curr == '=')
             attr_value = None
             if has_value:
                 source.next()
@@ -177,7 +201,7 @@ class Tag:
         is_auto_closing = (source.curr == "/")
         if is_auto_closing:
             source.next()
-            reader.match(">", context='after "/"')
+            reader.match(">", context="after '/'")
 
         return {
             "name": name,

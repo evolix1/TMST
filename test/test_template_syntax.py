@@ -6,11 +6,26 @@ import tmst.syntax
 
 
 class Cases:
-    all = ("empty_template one_tag tag_name_is_followed_by_space"
-           " attribute_is_followed_by_space blank_template"
-           " attribute_idly attribute_can_be_both_captured_and_have_value"
-           " attribute_can_be_captured attribute_can_have_value"
-           " attribute_can_have_value_with_simple_quote_also").split()
+    all = ("empty_template"
+           " one_tag"
+           " tag_name_is_followed_by_space"
+           " attribute_is_followed_by_space"
+           " blank_template"
+           " attribute_idly"
+           " attribute_can_be_both_captured_and_have_value"
+           " attribute_can_be_captured"
+           " attribute_can_have_value"
+           " attribute_can_have_value_with_simple_quote_also"
+           " attribute_value_can_be_empty"
+           " autoclosing_tag_doesnt_have_space_at_the_end"
+           " attribute_capture_cannot_have_space_before_name"
+           " attribute_capture_must_follow_attribute_id"
+           " attribute_value_must_follow_attribute_id"
+           " attribute_id_can_only_start_with_letter_not_hypen"
+           " attribute_id_can_only_start_with_letter_not_underscore"
+           " attribute_id_can_only_start_with_letter_not_number"
+           " attribute_id_can_only_start_with_letter_not_colon"
+           "").split()
 
     def __init__(self):
         self.casedir = pathlib.Path(__file__).resolve().parent / "cases"
@@ -57,7 +72,7 @@ class ValidTest:
     def check_with(self, testcase):
         try:
             tmst.syntax.compile(self.template)
-        except tmst.syntax.PatternSyntaxError as exc:
+        except Exception as exc:
             testcase.fail(str(exc))
 
     def attachment(self):
