@@ -146,6 +146,8 @@ class Tag:
             source.next()
         else:
             name = reader.next_identifier()
+            if not name:
+                reader.raise_error("expected tag name, not '{curr}'")
         reader.match_then_skip_ws("after tag name")
 
         # pass attributes

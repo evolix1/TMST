@@ -25,6 +25,16 @@ class Cases:
            " attribute_id_can_only_start_with_letter_not_underscore"
            " attribute_id_can_only_start_with_letter_not_number"
            " attribute_id_can_only_start_with_letter_not_colon"
+           " attribute_id_has_lowercase_letter"
+           " attribute_id_has_uppercase_letter"
+           " attribute_id_supports_hypen_and_underscore"
+           " tag_name_can_only_start_with_letter_not_hypen"
+           " tag_name_can_only_start_with_letter_not_underscore"
+           " tag_name_can_only_start_with_letter_not_number"
+           " tag_name_can_only_start_with_letter_not_colon"
+           " tag_name_has_lowercase_letter"
+           " tag_name_has_uppercase_letter"
+           " tag_name_supports_hypen_and_underscore"
            "").split()
 
     def __init__(self):
