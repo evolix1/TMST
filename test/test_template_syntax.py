@@ -6,51 +6,38 @@ import tmst.syntax
 
 
 class Cases:
-    all = ("empty_template"
-           " one_tag"
-           " tag_name_is_followed_by_space"
-           " attribute_is_followed_by_space"
-           " blank_template"
-           " attribute_idly"
-           " attribute_can_be_both_captured_and_have_value"
-           " attribute_can_be_captured"
-           " attribute_can_have_value"
-           " attribute_can_have_value_with_simple_quote_also"
-           " attribute_value_can_be_empty"
-           " autoclosing_tag_doesnt_have_space_at_the_end"
-           " attribute_capture_cannot_have_space_before_name"
-           " attribute_capture_must_follow_attribute_id"
-           " attribute_value_must_follow_attribute_id"
-           " attribute_value_when_capture_must_follow_capture"
-           " attribute_id_can_only_start_with_letter_not_hypen"
-           " attribute_id_can_only_start_with_letter_not_underscore"
-           " attribute_id_can_only_start_with_letter_not_number"
-           " attribute_id_can_only_start_with_letter_not_colon"
-           " attribute_id_has_lowercase_letter"
-           " attribute_id_has_uppercase_letter"
-           " attribute_id_supports_hypen_and_underscore"
-           " tag_name_can_only_start_with_letter_not_hypen"
-           " tag_name_can_only_start_with_letter_not_underscore"
-           " tag_name_can_only_start_with_letter_not_number"
-           " tag_name_can_only_start_with_letter_not_colon"
-           " tag_name_has_lowercase_letter"
-           " tag_name_has_uppercase_letter"
-           " tag_name_supports_hypen_and_underscore"
-           "").split()
-
     def __init__(self):
         self.casedir = pathlib.Path(__file__).resolve().parent / "cases"
 
-    def feed(self, tt):
+    def discover_local_tests(self):
+        """Register all available test cases from the 'cases' folder."""
+
+        def clean(path):
+            return path.stem
+
+        def is_test(path):
+            return path.suffix in (".success", ".error", ".exception")
+
+        def knife(root):
+            return filter(lambda x: x is not None, (clean(x)
+                                                    for x in root.iterdir()
+                                                    if is_test(x)))
+
+        self.test_cases = set(knife(self.casedir))
+
+    def feed(self, test_class: unittest.TestCase):
+        """Inject test case method into the testing class."""
         for name, func in self.build_tests():
-            setattr(tt, name, func)
+            setattr(test_class, name, func)
 
     def build_tests(self):
-        for rawname in Cases.all:
+        """Build the test case method from registered test cases."""
+        for rawname in self.test_cases:
             name = "test_{}".format(rawname)
             yield name, self.hook(rawname)
 
-    def hook(self, rawname):
+    def hook(self, rawname: str):
+        """Build a test method for the given test case."""
         success = self.casedir / "{}.success".format(rawname)
         if success.exists():
             return self.hook_success(success)
@@ -62,11 +49,13 @@ class Cases:
 
         raise RuntimeError("no such test {}".format(rawname))
 
-    def hook_success(self, path):
+    def hook_success(self, path: str):
+        """Return the test method of the valid test case."""
         with open(path, "r") as case:
             return ValidTest(case.read()).attachment()
 
-    def hook_error(self, path, excpath):
+    def hook_error(self, path: str, excpath: str):
+        """Return the test method of the invalid test case."""
         with open(path, "r") as case:
             with open(excpath, "r") as expected:
                 excname, pos, msg = expected.readlines()
@@ -115,7 +104,9 @@ class TestTemplate(unittest.TestCase):
     pass
 
 
-Cases().feed(TestTemplate)
+cases = Cases()
+cases.discover_local_tests()
+cases.feed(TestTemplate)
 
 if __name__ == "__main__":
     unittest.main()
