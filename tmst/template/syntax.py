@@ -173,7 +173,6 @@ class Parser:
         reader = Reader(self.source)
 
         # move at the begining af the tag declaratation
-        reader.skip_ws()
         reader.match("<")
 
         # pass the tag name
@@ -268,11 +267,12 @@ def compile(input: str):
     logging.root.info("compile template")
 
     source = Source(input)
+    skip_ws = Reader(source).skip_ws
 
     # initiate reading
     source.next()
-    Reader(source).skip_ws()
+    skip_ws()
 
-    if not source.done:
+    while not source.done:
         Parser(source).open_tag()
-        assert source.done, "internal error, source not read entirely"
+        skip_ws()
