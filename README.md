@@ -11,7 +11,7 @@ It simplifies information capture within a DOM structure.
 
 ### Simple templates
 
-This first example extracts all image's url.
+This first example captures all image's url.
 
 ```xml
 <img src:{picture} />
@@ -21,7 +21,7 @@ Ok fine, but this is no better than XPath.
 
 <br/>
 
-This second example groups extraction within an identified scope.
+This second example groups capture within an identified scope.
 
 One main thing to know, __parent/child relationship in the template is not direct__.
 Between `card` and `card-title` in the source DOM to parse, there can be 0 to &infin; intermediate level.

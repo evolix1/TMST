@@ -10,7 +10,7 @@ import tmst
 class Cases:
     def __init__(self):
         self.casedir = pathlib.Path(
-            __file__).resolve().parent / "extraction_cases"
+            __file__).resolve().parent / "capture_cases"
         self.test_cases = set()
         self.avoided = []
         self.cache = {}
@@ -73,7 +73,7 @@ class Cases:
                 input_data = self.load(data_filename + ".html")
                 result_data = case.read()
 
-                return ExtractionTest(template, input_data,
+                return CaptureCase(template, input_data,
                                       result_data).attachment()
 
         raise RuntimeError("no such test {}".format(rawname))
@@ -88,7 +88,7 @@ class Cases:
         return cached
 
 
-class ExtractionTest:
+class CaptureCase:
     def __init__(self, template, input_data, result):
         self.template = template
         self.input_data = input_data
@@ -97,7 +97,7 @@ class ExtractionTest:
     def check_with(self, testcase):
         parser = tmst.compile(self.template)
         input_dom = lxml.html.fromstring(self.input_data)
-        result = parser.extract_from(input_dom)
+        result = parser.capture_from(input_dom)
 
         testcase.assertEqual(result, self.expected_result)
 
@@ -105,13 +105,13 @@ class ExtractionTest:
         return lambda x: self.check_with(x)
 
 
-class TestExtraction(unittest.TestCase):
+class TestCapture(unittest.TestCase):
     pass
 
 
 cases = Cases()
 cases.discover_local_tests()
-cases.feed(TestExtraction)
+cases.feed(TestCapture)
 
 if __name__ == "__main__":
     import atexit

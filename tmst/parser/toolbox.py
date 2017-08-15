@@ -74,7 +74,7 @@ class Parser:
         for tool in self.capturing_net:
             tool(dom, storage)
 
-    def extract_from(self, dom: lxml.html.HtmlElement):
+    def capture_from(self, dom: lxml.html.HtmlElement):
         data = {}
         self._dig(dom, storage=data)
         return data
