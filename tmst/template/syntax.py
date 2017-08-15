@@ -171,30 +171,30 @@ class Parser:
 
     def open_tag(self):
         reader = Reader(self.source)
+        otag = ast.OpenTag()
 
         # move at the begining af the tag declaratation
         reader.match("<")
 
         # pass the tag name
-        name = None
         if self.source.curr == "#":
             self.source.next()
         else:
-            name = reader.next_identifier()
-            if not name:
+            otag.name = reader.next_identifier()
+            if not otag.name:
                 reader.raise_error("expected tag name, not '{curr}'")
         reader.match_then_skip_ws("after tag name")
 
         # pass attributes
-        attributes = []
         while self.source.curr not in (">", "/"):
-            attr_name = reader.next_identifier()
+            attr = ast.Attribute()
+            attr.name = reader.next_identifier()
 
             # no identifier found
-            if not attr_name:
+            if not attr.name:
                 # special case if this is after an attribute declaration
-                if attributes:
-                    last_attr = attributes[-1]
+                if otag.attributes:
+                    last_attr = otag.attributes[-1]
                     # this might an error like this "id :{name}"
                     # or like this "id ='...'"
                     # where the space is misleading
@@ -204,63 +204,60 @@ class Parser:
                         reader.raise_error("unexpected whitespace between"
                                            " attribute identifier"
                                            " and capture identifier")
-                    elif self.source.curr == '=' and not last_attr["capture"]:
-                        reader.raise_error("unexpected whitespace between"
-                                           " attribute identifier and its value")
+                    elif self.source.curr == '=' and not last_attr.capture:
+                        reader.raise_error(
+                            "unexpected whitespace between"
+                            " attribute identifier and its value")
                     elif self.source.curr == '=':
                         reader.raise_error("unexpected whitespace between"
                                            " capture identifier"
                                            " and attribute value")
 
-                reader.raise_error("expected attribute identifier, not '{curr}'")
+                reader.raise_error(
+                    "expected attribute identifier, not '{curr}'")
 
             has_capture = (self.source.curr == ':')
-            attr_capture = None
             if has_capture:
                 self.source.next()
                 reader.match(
                     '{', context="and not '{curr}' to capture the attribute")
-                attr_capture = reader.next_identifier_path()
+                attr.capture = reader.next_identifier_path()
 
                 # no capture name found
                 # (same as empty which is the default state)
-                if attr_capture == ast.IdentifierPath():
+                if attr.capture == ast.IdentifierPath():
                     # special case if no name provided
                     if self.source.curr == '}':
                         reader.raise_error("capture must have an identifier")
-                    reader.raise_error("expected capture identifier, not '{curr}'")
-                elif not attr_capture.is_valid():
+                    reader.raise_error(
+                        "expected capture identifier, not '{curr}'")
+                elif not attr.capture.is_valid():
                     reader.raise_error(
                         "invalid capture identifier"
-                        " with \"{}\"".format(str(attr_capture)))
+                        " with \"{}\"".format(str(attr.capture)))
 
                 reader.match(
                     '}', context="and not '{curr}' after capture identifier")
 
             has_value = (self.source.curr == '=')
-            attr_value = None
             if has_value:
                 self.source.next()
-                attr_value = reader.next_string("for attribute value")
+                attr.value = reader.next_string("for attribute value")
 
+            otag.attributes.append(attr)
             reader.match_then_skip_ws("after attribute")
-
-            attributes.append({
-                "name": attr_name,
-                "capture": attr_capture,
-                "value": attr_value
-            })
-
             reader.skip_ws()
 
         # pass tag end
-        is_auto_closing = (self.source.curr == "/")
-        if is_auto_closing:
+        otag.auto_close = (self.source.curr == "/")
+        if otag.auto_close:
             self.source.next()
             reader.match(">", context="after '/'")
 
-        assert is_auto_closing, "only autoclosing tag supported"
+        assert otag.auto_close, "only autoclosing tag supported"
         reader.skip_ws()
+
+        return otag
 
 
 def compile(input: str):
@@ -274,5 +271,5 @@ def compile(input: str):
     skip_ws()
 
     while not source.done:
-        Parser(source).open_tag()
+        yield Parser(source).open_tag()
         skip_ws()

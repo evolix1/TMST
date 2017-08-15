@@ -45,8 +45,8 @@ class IdentifierPath:
 
 class Attribute:
     def __init__(self,
-                 name: Identifier,
-                 capture: IdentifierPath=None,
+                 name: [None, Identifier]=None,
+                 capture: [None, IdentifierPath]=None,
                  value: str=None):
         self.name = name
         self.capture = capture
@@ -54,6 +54,7 @@ class Attribute:
 
 
 class OpenTag:
-    def __init__(self, name: str):
+    def __init__(self, name: [None, Identifier]=None):
         self.name = name
         self.attributes = []
+        self.auto_close = False

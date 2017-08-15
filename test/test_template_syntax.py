@@ -87,7 +87,7 @@ class ValidTest:
 
     def check_with(self, testcase):
         try:
-            syntax.compile(self.template)
+            tuple(syntax.compile(self.template))
         except Exception as exc:
             testcase.fail(str(exc))
 
@@ -105,7 +105,7 @@ class ErroneousTest:
 
     def check_with(self, testcase):
         try:
-            syntax.compile(self.template)
+            tuple(syntax.compile(self.template))
             testcase.fail("expected to raise at {}: {}"
                           .format(self.pos, self.error_msg))
         except syntax.PatternSyntaxError as exc:

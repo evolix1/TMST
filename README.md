@@ -29,7 +29,7 @@ Same thing append with `img`, it can be or not sibling with `span`.
 
 ```xml
 <#:{item} class="card" />
-    <span class="card-title">{item.title}/</span>
+    <span class="card-title">{item.title}</span>
     <img src:{item.picture} />
 </>
 ```
