@@ -2,7 +2,7 @@ import pathlib
 import unittest
 
 import fix_import
-from tmst.template import syntax
+from tmst import syntax
 
 
 class Cases:

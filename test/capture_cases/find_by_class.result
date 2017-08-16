@@ -1,5 +1,0 @@
-template:input_with_item_class
-data:list_of_inputs
-{
-  "captured_values": ["aaa", "ccc", "ddd"]
-}
