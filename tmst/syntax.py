@@ -4,8 +4,7 @@ import itertools
 import collections
 
 if "syntax logging":
-    formatter = logging.Formatter("%(asctime)s"
-                                  " [%(filename)s:%(lineno)03s]"
+    formatter = logging.Formatter("[%(filename)s:%(lineno)03s]"
                                   " %(name)s - %(levelname)s - %(message)s")
 
     handler = logging.StreamHandler()
@@ -122,6 +121,7 @@ class Anchor:
         self.name = name
         self.is_final_state = final_state
         self.expectations = []
+        self.default_action = None
 
     def in_case(self, cond: callable, action: callable):
         self.expectations.append((cond, action))
@@ -133,14 +133,15 @@ class Anchor:
         return self
 
     def default(self, action: callable):
-        default = lambda _: True
-        self.expectations.append((default, action))
+        self.default_action = action
         return self
 
     def __iter__(self):
         return iter(self.expectations)
 
-    def conform_to(self, what):
+    def conform_to(self, what: [str, None]):
+        if what is None:
+            return
         result = (action for cond, action in self.expectations if cond(what))
         return next(result, None)
 
@@ -154,9 +155,12 @@ class Parser:
                                           str.isspace, self.skip_ws).match(
                                               '<', self.open_tag))
 
-        self._any_attribute = (Anchor("any attribute").in_case(
-            str.isspace,
-            self.skip_ws).match('/', self.end_autoclose_tag).match(
+        self._tag_interval = (Anchor("tag interval").in_case(
+            str.isspace, self.ws_in_tag_definition).match(
+                '/', self.end_autoclose_tag).match('>', self.end_open_tag))
+
+        self._any_attribute = (Anchor("any attribute").match(
+            '/', self.end_autoclose_tag).match(
                 '>', self.end_open_tag).default(self.attr_name))
 
         self._post_attribute_name = (Anchor("post attribute name").in_case(
@@ -183,7 +187,7 @@ class Parser:
         return self
 
     def __next__(self):
-        syntax_logger.debug("extract next token from position {}"
+        syntax_logger.debug("extract next token from {}"
                             .format(self.position.name))
 
         token = None
@@ -192,25 +196,27 @@ class Parser:
         return token
 
     def read_one(self):
-        if self.source.done:
-            syntax_logger.debug("done parsing as source is emptied")
-            assert self.position.is_final_state, (
-                "didn't expect to have nothing more to parse")
-            raise StopIteration()
+        if not self.source.done:
+            self.source.next()
 
-        self.source.next()
-        while not self.source.done:
+        while True:
             syntax_logger.debug(
                 "try to find next action from {}, currently at {} '{}'".format(
                     self.position.name, self.source.strpos, self.source.curr))
 
             action = self.position.conform_to(self.source.curr)
-            assert action is not None, "no action found"
 
-            syntax_logger.debug("action is {}".format(action.__qualname__))
+            if self.source.done:
+                syntax_logger.debug("done parsing as source is emptied")
+                assert action is None, (
+                    "no action expected when no more to read")
+                assert self.position.is_final_state, (
+                    "current position expected to be final")
+                raise StopIteration()
 
-            if not self.source.done:
-                self.source.next()
+            syntax_logger.debug(
+                "action to be called is {}".format(action.__qualname__))
+            self.source.next()
 
             value, self.position = action()
             if value:
@@ -222,12 +228,13 @@ class Parser:
     # Parse error
 
     def raise_unexpected(self, what: str, context: str):
-        self.source.raise_error("expected '{w}' {c}, not '{{curr}}'"
+        self.source.raise_error("expected {w} {c}, not '{{curr}}'"
                                 .format(w=what, c=context))
 
     def expect_or_raise_error(self, what: str, context: str):
-        if not self.source.next() == what:
-            self.raise_unexpected(what, context)
+        if not self.source.curr == what:
+            self.raise_unexpected("'" + what + "'", context)
+        self.source.next()
 
     ###################################
     # Extraction utils
@@ -299,9 +306,10 @@ class Parser:
     def skip_ws(self):
         syntax_logger.debug("skip whitespace")
 
-        self.source.freeze_once()
-        skip = lambda x: x is not None and x.isspace()
-        tuple(itertools.takewhile(skip, self.source))
+        if not self.source.done:
+            self.source.freeze_once()
+            skip = lambda x: x is not None and x.isspace()
+            tuple(itertools.takewhile(skip, self.source))
 
         return None, self.position
 
@@ -313,17 +321,21 @@ class Parser:
     # Open tag parsing
 
     def open_tag(self):
-        syntax_logger.debug("parsing open tag")
+        syntax_logger.debug("parse tag name")
 
         if self.source.curr == "#":
-            return (OpeningOfTag(name=None, anything=True),
-                    self._any_attribute)
+            tag = OpeningOfTag(name=None, anything=True)
+        else:
+            id = self.next_identifier("tag name")
+            tag = OpeningOfTag(name=id, anything=False)
 
-        id = self.next_identifier("tag name")
-        tag = OpeningOfTag(name=id, anything=False)
+        return tag, self._tag_interval
 
-        self.followed_by_whitespace(context="after tag name")
-        return tag, self._any_attribute
+    def ws_in_tag_definition(self):
+        syntax_logger.debug("skip whitespace in open tag")
+
+        self.skip_ws()
+        return None, self._any_attribute
 
     def end_autoclose_tag(self):
         syntax_logger.debug("close autocloning tag")
@@ -364,7 +376,7 @@ class Parser:
 
     def attr_done(self):
         syntax_logger.debug("done parsing attribute")
-        return None, self._any_attribute
+        return None, self._tag_interval
 
 
 def compile(input: str):
