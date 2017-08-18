@@ -115,9 +115,7 @@ class Cases:
         """Return the test method of the invalid test case but without
         explanation."""
         with open(path, "r") as case:
-            return self._bind(DevErrorTest(case.read(),
-                                 excname.strip(), pos.strip(),
-                                 msg.strip()))
+            return self._bind(DevErrorTest(case.read()))
 
 
 class ValidTest:

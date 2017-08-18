@@ -3,6 +3,8 @@ import logging
 import itertools
 import collections
 
+from tmst import rfc_xml
+
 if "syntax logging":
     formatter = logging.Formatter("[%(filename)s:%(lineno)03s]"
                                   " %(name)s - %(levelname)s - %(message)s")
@@ -12,12 +14,15 @@ if "syntax logging":
     handler.setFormatter(formatter)
 
     syntax_logger = logging.getLogger("template.syntax")
-    syntax_logger.setLevel(logging.DEBUG)
     syntax_logger.addHandler(handler)
 
     source_logger = logging.getLogger("template.source")
-    source_logger.setLevel(logging.DEBUG)
     source_logger.addHandler(handler)
+
+    import os
+    if os.environ.get("DEBUG", False) in (True, "1"):
+        syntax_logger.setLevel(logging.DEBUG)
+        source_logger.setLevel(logging.DEBUG)
 
 if "build syntax object":
     new = collections.namedtuple
@@ -30,7 +35,7 @@ if "build syntax object":
     """Full closing tag. Ex: '</span>' or '</>'"""
     EndTag = new("EndTag", ["maybe_name"])
     """Attribute name. Ex: 'class'"""
-    AttributeName = new("AttributeName", ["name"])
+    AttributeNamePart = new("AttributeNamePart", ["part"])
     """Attribute capture part. Ex: '{returned_var}'"""
     AttributeCapture = new("AttributeCapture", ["path"])
     """Attribute value. Ex: '"card-title"'"""
@@ -242,14 +247,12 @@ class Parser:
     def next_identifier(self, subject: str):
         syntax_logger.debug("extract identifier")
 
-        if not self.source.curr.isalpha():
-            self.raise_unexpected("whitespace", context="for " + subject)
-
-        def valid(t: str):
-            return t.isalpha() or t in "-_"
-
         start = self.source.curr
-        name = start + "".join(itertools.takewhile(valid, self.source))
+        if not rfc_xml.char_is_namestart(start):
+            self.raise_unexpected("start of name", context="for " + subject)
+
+        name = start + "".join(
+            itertools.takewhile(rfc_xml.char_is_name, self.source))
         return Identifier(name)
 
     def next_identifier_path(self, context: str):
